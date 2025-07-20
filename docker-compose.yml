@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      # Set your external Postgres URI here
+      DATABASE_URL: postgresql://postgres:YOUR-PASSWORD@db.mqvskwcyktgjdecucmxl.supabase.co:5432/postgres
+    volumes:
+      - .:/app

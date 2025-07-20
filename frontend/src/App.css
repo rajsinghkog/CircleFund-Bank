@@ -1,0 +1,134 @@
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
+  margin: 0;
+  min-height: 100vh;
+}
+
+.navbar {
+  background: #312e81;
+  color: #fff;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.navbar h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  letter-spacing: 1px;
+}
+.navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+}
+.navbar li {
+  font-size: 1.1rem;
+}
+.navbar a {
+  color: #fff;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.navbar a:hover {
+  color: #a5b4fc;
+}
+
+.container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 1.2rem;
+  box-shadow: 0 4px 24px rgba(49,46,129,0.08);
+}
+
+.card {
+  background: #f1f5f9;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(49,46,129,0.06);
+  margin-bottom: 2rem;
+}
+.card h2 {
+  color: #312e81;
+  margin-bottom: 1.2rem;
+}
+
+input, button {
+  font-size: 1rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #c7d2fe;
+  outline: none;
+}
+input:focus {
+  border-color: #6366f1;
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary:hover {
+  background: #312e81;
+}
+
+.btn-yes {
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  margin-right: 1rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.btn-no {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.repayment-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.repayment-table th, .repayment-table td {
+  border: 1px solid #c7d2fe;
+  padding: 0.7rem;
+  text-align: left;
+}
+.repayment-table th {
+  background: #6366f1;
+  color: #fff;
+}
+.repayment-table td {
+  background: #f1f5f9;
+}
+
+.history {
+  margin-top: 2rem;
+}
+.history h3 {
+  margin-bottom: 0.5rem;
+  color: #6366f1;
+}
+.history ul {
+  padding-left: 1.2rem;
+}
+.status {
+  margin-top: 2rem;
+}
+.status h3 {
+  color: #6366f1;
+}
