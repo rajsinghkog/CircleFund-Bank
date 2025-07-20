@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
 function Signup() {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
@@ -10,7 +11,7 @@ function Signup() {
     const res = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ name, phone, password })
     });
     const data = await res.json();
     setMessage(data.message || data.error);
@@ -22,9 +23,16 @@ function Signup() {
       <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
+          placeholder="Name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Phone Number"
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
           required
         />
         <input
