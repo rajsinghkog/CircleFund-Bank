@@ -10,7 +10,7 @@ A simple ATM bank application built with FastAPI. It supports account management
 
 ## Installation & Setup
 
-1. **Clone the repository:**
+1. **Clone the ruv epository:**
     ```bash
     git clone <repo-url>
     cd CircleFund-Bank
