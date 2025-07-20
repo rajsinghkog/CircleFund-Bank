@@ -9,6 +9,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
+    password_hash = Column(String, nullable=False)  # New field for password hash
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Group(Base):

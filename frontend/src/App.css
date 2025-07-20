@@ -35,6 +35,17 @@ body {
 .navbar a:hover {
   color: #a5b4fc;
 }
+.navbar a.active {
+  color: #a5b4fc;
+  font-weight: bold;
+  border-bottom: 2px solid #a5b4fc;
+}
+
+.navbar button.pressed {
+  background: #e0e7ff;
+  color: #312e81;
+  font-weight: bold;
+}
 
 .container {
   max-width: 700px;
@@ -96,6 +107,13 @@ input:focus {
   padding: 0.6rem 1.2rem;
   border-radius: 0.5rem;
   cursor: pointer;
+}
+
+.btn-primary.pressed {
+  background: #4338ca;
+  color: #fff;
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(49,46,129,0.12);
 }
 
 .repayment-table {

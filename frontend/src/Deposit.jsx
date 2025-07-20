@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from './Button';
 
 function Deposit() {
   return (
@@ -6,7 +7,7 @@ function Deposit() {
       <h2>Deposit ₹5</h2>
       <form>
         <input type="number" placeholder="Amount (₹)" min="5" defaultValue={5} required />
-        <button className="btn-primary" type="submit">Deposit</button>
+        <Button className="btn-primary" type="submit">Deposit</Button>
       </form>
       <div className="history">
         <h3>Deposit History</h3>

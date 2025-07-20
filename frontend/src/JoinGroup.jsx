@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Button from './Button';
 
 function JoinGroup() {
   const [groups, setGroups] = useState([]);
@@ -146,7 +147,7 @@ function JoinGroup() {
           onChange={e => setGroupId(e.target.value)}
           required
         />
-        <button className="btn-primary" type="submit">Join Group</button>
+        <Button className="btn-primary" type="submit">Join Group</Button>
       </form>
       {message && <p style={{color:'green'}}>{message}</p>}
       {error && <p style={{color:'red'}}>{error}</p>}

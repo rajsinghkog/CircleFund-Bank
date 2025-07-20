@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from './Button';
 
 function LoanRequest() {
   return (
@@ -7,7 +8,7 @@ function LoanRequest() {
       <form>
         <input type="number" placeholder="Amount (₹)" required />
         <input type="date" placeholder="Due Date" required />
-        <button className="btn-primary" type="submit">Request Loan</button>
+        <Button className="btn-primary" type="submit">Request Loan</Button>
       </form>
       <div className="status">
         <h3>Loan Status</h3>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Button from './Button';
 
 function Profile() {
   const [username, setUsername] = useState('');
@@ -26,7 +27,7 @@ function Profile() {
         value={username}
         onChange={e => setUsername(e.target.value)}
       />
-      <button onClick={fetchProfile}>Get Profile</button>
+      <Button onClick={fetchProfile}>Get Profile</Button>
       {user && (
         <div>
           <h3>User Info</h3>

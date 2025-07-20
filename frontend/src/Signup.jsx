@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import Button from './Button';
 
-function Signup() {
+function Signup({ setIsLoggedIn, setUser }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +16,20 @@ function Signup() {
     });
     const data = await res.json();
     setMessage(data.message || data.error);
+    if (data.message && !data.error) {
+      // Signup successful, now sign in automatically
+      const signinRes = await fetch('/api/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password }),
+        credentials: 'include'
+      });
+      const signinData = await signinRes.json();
+      if (signinData.user) {
+        setIsLoggedIn(true);
+        setUser(signinData.user);
+      }
+    }
   };
 
   return (
@@ -42,7 +57,7 @@ function Signup() {
           onChange={e => setPassword(e.target.value)}
           required
         />
-        <button type="submit">Sign Up</button>
+        <Button className="btn-primary" type="submit">Sign Up</Button>
       </form>
       {message && <p>{message}</p>}
     </div>

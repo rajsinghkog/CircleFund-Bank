@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from './Button';
 
 function VotingDashboard() {
   return (
@@ -7,13 +8,13 @@ function VotingDashboard() {
       <div className="loan-list">
         <div className="loan-item">
           <p>Loan Request by Alice - ₹1000</p>
-          <button className="btn-yes">Vote Yes</button>
-          <button className="btn-no">Vote No</button>
+          <Button className="btn-yes">Vote Yes</Button>
+          <Button className="btn-no">Vote No</Button>
         </div>
         <div className="loan-item">
           <p>Loan Request by Bob - ₹500</p>
-          <button className="btn-yes">Vote Yes</button>
-          <button className="btn-no">Vote No</button>
+          <Button className="btn-yes">Vote Yes</Button>
+          <Button className="btn-no">Vote No</Button>
         </div>
       </div>
     </div>
