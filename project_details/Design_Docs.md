@@ -18,10 +18,12 @@ Unified App	FastAPI serves both backend and static frontend
 
 ```mermaid
 flowchart TD
-    A[Frontend (Static HTML/JS)]
-    B[FastAPI Server\n- User API\n- Group & Loan APIs\n- Voting Logic\n- Serves static files]
-    C[PostgreSQL DB\nTables: users, groups, deposits, loans, votes]
-    A -->|served from FastAPI| B --> C
+    A[Frontend: Static HTML/JS]
+    B[FastAPI Server: APIs + Voting + Serves Frontend]
+    C[PostgreSQL: Users, Loans, Deposits, Votes]
+
+    A -->|Served by| B
+    B -->|Reads/Writes| C
 ```
 
 🏗 Architecture
