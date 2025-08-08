@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit - CircleFund Bank</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+        }
+        .table th {
+            font-weight: 600;
+            background-color: #f8f9fa;
+        }
+        .btn-success {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        .btn-success:hover {
+            background-color: #157347;
+            border-color: #146c43;
+        }
+        .badge {
+            font-weight: 500;
+            padding: 0.4em 0.65em;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(25, 135, 84, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <!-- Pending Deposits Section -->
+                <div class="mb-4">
+                    <h2 class="mb-4">Pending Deposits</h2>
+                    <div id="pendingDeposits">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Make a Deposit Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Make a Deposit</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="depositForm">
+                            <div class="mb-3">
+                                <label for="group" class="form-label">Select Group</label>
+                                <select class="form-select" id="group" name="group" required>
+                                    <option value="">Loading groups...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount (₹)</label>
+                                <input type="number" class="form-control" id="amount" name="amount" min="1" step="0.01" required>
+                                <div class="form-text">The suggested amount will be pre-filled based on the group's contribution.</div>
+                            </div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="submit" class="btn btn-success px-4">
+                                    <i class="bi bi-coin me-2"></i>Submit Deposit
+                                </button>
+                            </div>
+                        </form>
+                        <div id="depositMsg" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Deposits Section -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recent Deposits</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentDeposits">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/navbar.js"></script>
+    <script src="/static/deposit.js"></script>
+    <script>
+        // Add functionality for recent deposits
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (!user) return;
+
+            // Load recent deposits
+            fetch(`/api/deposit/history?phone=${encodeURIComponent(user.phone)}&limit=5`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('recentDeposits');
+                    if (data.error || !Array.isArray(data) || data.length === 0) {
+                        container.innerHTML = '<p class="text-muted mb-0">No recent deposits found.</p>';
+                        return;
+                    }
+
+                    let html = '<div class="list-group list-group-flush">';
+                    data.forEach(deposit => {
+                        const date = new Date(deposit.date);
+                        const formattedDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">₹${deposit.amount.toFixed(2)}</h6>
+                                <small class="text-muted">${formattedDate}</small>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Completed</span>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(() => {
+                    document.getElementById('recentDeposits').innerHTML = 
+                        '<p class="text-danger">Failed to load recent deposits.</p>';
+                });
+        });
+    </script>
+</body>
+</html>

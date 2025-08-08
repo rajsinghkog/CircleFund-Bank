@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Request - CircleFund Bank</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="navbar"></div>
+    <div class="container mt-5">
+        <h2>Request a Loan</h2>
+        <form id="loanRequestForm" class="mt-4">
+            <div class="mb-3">
+                <label for="amount" class="form-label">Loan Amount (₹)</label>
+                <input type="number" class="form-control" id="amount" min="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="group" class="form-label">Select Group</label>
+                <select class="form-select" id="group" required>
+                    <option value="">Loading groups...</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-warning">Request Loan</button>
+        </form>
+        <div id="loanRequestMsg" class="mt-3"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/navbar.js"></script>
+    <script src="/static/loan_request.js"></script>
+</body>
+</html> 
