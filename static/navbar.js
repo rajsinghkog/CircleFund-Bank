@@ -3,8 +3,10 @@ function renderNavbar() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const themeIcon = isDark ? 'bi-sun' : 'bi-moon-stars';
   const themeLabel = isDark ? 'Light' : 'Dark';
+  const navbarTone = isDark ? 'navbar-dark' : 'navbar-light';
+  const toggleBtnClass = isDark ? 'btn-outline-light' : 'btn-outline-dark';
   const path = window.location.pathname;
-  let nav = `<nav class="navbar navbar-expand-lg navbar-dark bg-transparent glass">
+  let nav = `<nav class="navbar navbar-expand-lg ${navbarTone} bg-transparent glass">
     <div class="container">
       <a class="navbar-brand" href="/">CircleFund Bank</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,14 +28,11 @@ function renderNavbar() {
   } else {
     nav += `
       <li class="nav-item"><a class="nav-link ${path==='/'?'active':''}" href="/">Home</a></li>
-      <li class="nav-item"><a class="nav-link ${path==='/create_group'?'active':''}" href="/create_group">Create Group</a></li>
-      <li class="nav-item"><a class="nav-link ${path==='/login'?'active':''}" href="/login">Login</a></li>
-      <li class="nav-item"><a class="nav-link ${path==='/signup'?'active':''}" href="/signup">Sign Up</a></li>
     `;
   }
   nav += `
       <li class="nav-item ms-lg-3">
-        <button id="themeToggle" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2">
+        <button id="themeToggle" class="btn btn-sm ${toggleBtnClass} d-flex align-items-center gap-2">
           <i class="bi ${themeIcon}"></i><span class="d-none d-sm-inline">${themeLabel} mode</span>
         </button>
       </li>
@@ -65,4 +64,8 @@ function renderNavbar() {
     });
   }
 }
-document.addEventListener('DOMContentLoaded', renderNavbar);
+if (document.readyState !== 'loading') {
+  renderNavbar();
+} else {
+  document.addEventListener('DOMContentLoaded', renderNavbar);
+}

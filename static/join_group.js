@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     const groupSelect = document.getElementById('group');
+    groupSelect.disabled = true;
     const form = document.getElementById('joinGroupForm');
     const msgDiv = document.getElementById('joinGroupMsg');
     const nameInput = document.getElementById('name');
@@ -16,20 +17,27 @@ document.addEventListener('DOMContentLoaded', function() {
     userGroupsList.innerHTML = '<li class="list-group-item"><div class="skeleton" style="height:18px"></div></li>';
 
     // Fetch groups for joining
-    fetch('/api/groups')
-        .then(res => res.json())
+    fetch('/api/groups', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)))
         .then(groups => {
+            if (!Array.isArray(groups) || groups.length === 0) {
+                groupSelect.innerHTML = '<option value="">No groups available yet</option>';
+                groupSelect.disabled = true;
+                return;
+            }
             groupSelect.innerHTML = '<option value="">Select a group</option>';
             groups.forEach(g => {
                 groupSelect.innerHTML += `<option value="${g.id}">${g.name} (₹${g.contribution_amount}, ${g.cycle})</option>`;
             });
+            groupSelect.disabled = false;
         })
         .catch(() => {
             groupSelect.innerHTML = '<option value="">Failed to load groups</option>';
+            groupSelect.disabled = true;
         });
 
     // Fetch user's groups and display
-    fetch(`/api/groups/user?phone=${encodeURIComponent(user.phone)}`)
+    fetch(`/api/groups/user?phone=${encodeURIComponent(user.phone)}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(groups => {
             userGroupsList.innerHTML = '';
@@ -73,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         userGroupsList.innerHTML = '<li class="list-group-item">You are not part of any groups yet.</li>';
                     } else {
                         groups.forEach(g => {
-                            userGroupsList.innerHTML += `<li class="list-group-item">${g.name} ( 9${g.contribution_amount}, ${g.cycle})</li>`;
+                            userGroupsList.innerHTML += `<li class="list-group-item">${g.name} (₹${g.contribution_amount}, ${g.cycle})</li>`;
                         });
                     }
                 })
