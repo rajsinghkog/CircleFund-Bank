@@ -14,20 +14,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentWithdrawLoanId = null;
 
-    // Format date
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        const options = { year: 'numeric', month: 'short', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
-    }
-
-    // Format currency
-    function formatCurrency(amount) {
-        return '₹' + parseFloat(amount).toFixed(2);
-    }
+    // Formatting helpers (delegates to cf utils if available)
+    const formatDate = (d) => (window.cf && cf.formatDate) ? cf.formatDate(d) : (d ? new Date(d).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }) : 'N/A');
+    const formatCurrency = (a) => (window.cf && cf.formatCurrency) ? cf.formatCurrency(a) : ('₹' + parseFloat(a).toFixed(2));
 
     // Load loan requests
     async function loadLoanRequests() {
+        // Skeletons
+        pendingLoansContainer.innerHTML = '<div class="skeleton" style="height:48px; margin-bottom:12px"></div><div class="skeleton" style="height:48px"></div>';
+        approvedLoansContainer.innerHTML = '<div class="skeleton" style="height:48px; margin-bottom:12px"></div><div class="skeleton" style="height:48px"></div>';
         try {
             const [pendingRes, approvedRes] = await Promise.all([
                 fetch(`/api/loans?user_id=${user.id}&status=pending`),
@@ -45,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="alert alert-danger">
                     Failed to load loan requests. Please try again later.
                 </div>`;
+            if (window.cf && cf.showToast) cf.showToast('Error', 'Failed to load loan requests', 'error');
         }
     }
 
@@ -52,9 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderLoanRequests(loans, container, status) {
         if (!loans || loans.length === 0) {
             container.innerHTML = `
-                <div class="alert alert-info">
-                    No ${status} loan requests found.
-                </div>`;
+                <div class="list-empty">No ${status} loan requests found.</div>`;
             return;
         }
 
@@ -74,19 +68,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tbody>`;
 
         loans.forEach(loan => {
-            const statusClass = {
-                'pending': 'bg-warning',
-                'approved': 'bg-success',
-                'rejected': 'bg-danger',
-                'withdrawn': 'bg-secondary'
-            }[loan.status] || 'bg-secondary';
+            const statusChip = {
+                'pending': '<span class="status-chip status-pending"><i class="bi bi-hourglass-split"></i> Pending</span>',
+                'approved': '<span class="status-chip status-approved"><i class="bi bi-check2-circle"></i> Approved</span>',
+                'rejected': '<span class="status-chip status-rejected"><i class="bi bi-x-circle"></i> Rejected</span>',
+                'withdrawn': '<span class="status-chip"><i class="bi bi-arrow-counterclockwise"></i> Withdrawn</span>'
+            }[loan.status] || '<span class="status-chip"><i class="bi bi-question-circle"></i> Unknown</span>';
 
             html += `
                 <tr>
                     <td>${formatDate(loan.created_at)}</td>
                     <td>${loan.group_name || 'N/A'}</td>
                     <td>${formatCurrency(loan.amount)}</td>
-                    <td><span class="badge ${statusClass}">${loan.status}</span></td>
+                    <td>${statusChip}</td>
                     <td>${formatDate(loan.due_date)}</td>
                     ${status === 'approved' ? `
                     <td>
@@ -129,63 +123,26 @@ document.addEventListener('DOMContentLoaded', function() {
     confirmWithdrawBtn.addEventListener('click', async function() {
         if (!currentWithdrawLoanId) return;
 
-        const btn = this;
-        const originalText = btn.innerHTML;
-        
-        try {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
+        await (window.cf && cf.withButtonLoading ? cf.withButtonLoading(this, async () => {
             const response = await fetch(`/api/loans/${currentWithdrawLoanId}/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: user.id })
             });
-
             const result = await response.json();
-            
             if (response.ok) {
-                showToast('Success', 'Loan amount has been withdrawn successfully.', 'success');
+                if (window.cf && cf.showToast) cf.showToast('Success', 'Loan withdrawn successfully.', 'success');
                 withdrawModal.hide();
-                loadLoanRequests(); // Refresh the list
+                loadLoanRequests();
             } else {
                 throw new Error(result.detail || 'Failed to withdraw loan');
             }
-        } catch (error) {
-            console.error('Withdrawal failed:', error);
-            showToast('Error', error.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            currentWithdrawLoanId = null;
-        }
+        }) : Promise.resolve());
+        currentWithdrawLoanId = null;
     });
 
     // Show toast notification
-    function showToast(title, message, type = 'info') {
-        const toastContainer = document.createElement('div');
-        toastContainer.className = `toast align-items-center text-white bg-${type} border-0`;
-        toastContainer.setAttribute('role', 'alert');
-        toastContainer.setAttribute('aria-live', 'assertive');
-        toastContainer.setAttribute('aria-atomic', 'true');
-        
-        toastContainer.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    <strong>${title}:</strong> ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>`;
-        
-        document.body.appendChild(toastContainer);
-        const toast = new bootstrap.Toast(toastContainer);
-        toast.show();
-        
-        // Remove the toast after it's hidden
-        toastContainer.addEventListener('hidden.bs.toast', function() {
-            document.body.removeChild(toastContainer);
-        });
-    }
+    // Use global cf.showToast now
 
     // Initialize the page
     loadLoanRequests();

@@ -75,6 +75,15 @@ from app.api.services.group_service import GroupService
 def list_groups():
     return GroupService.list_groups()
 
+@router.post('/groups')
+async def create_group(request: Request):
+    data = await request.json()
+    name = data.get('name')
+    contribution_amount = data.get('contribution_amount')
+    cycle = data.get('cycle')
+    creator_phone = data.get('creator_phone')
+    return GroupService.create_group(name=name, contribution_amount=contribution_amount, cycle=cycle, creator_phone=creator_phone)
+
 @router.post('/groups/join')
 def join_group(request: Request):
     # Expecting JSON: {"phone": ..., "group_id": ...}
@@ -122,7 +131,7 @@ async def submit_deposit(request: Request):
     # If we have an expected deposit ID, mark it as completed
     if expected_deposit_id and isinstance(result, dict) and 'deposit_id' in result:
         from app.db.database import SessionLocal
-        from app.db.models import ExpectedDeposit
+        from app.db.models import ExpectedDeposit, User
         db = SessionLocal()
         try:
             expected = db.query(ExpectedDeposit).filter(

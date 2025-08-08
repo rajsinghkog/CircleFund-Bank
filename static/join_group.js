@@ -11,13 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
     nameInput.value = user.name || '';
     nameInput.readOnly = true;
 
+    // Skeleton for user's groups
+    const userGroupsList = document.getElementById('userGroupsList');
+    userGroupsList.innerHTML = '<li class="list-group-item"><div class="skeleton" style="height:18px"></div></li>';
+
     // Fetch groups for joining
     fetch('/api/groups')
         .then(res => res.json())
         .then(groups => {
             groupSelect.innerHTML = '<option value="">Select a group</option>';
             groups.forEach(g => {
-                groupSelect.innerHTML += `<option value="${g.id}">${g.name} ( 9${g.contribution_amount}, ${g.cycle})</option>`;
+                groupSelect.innerHTML += `<option value="${g.id}">${g.name} (₹${g.contribution_amount}, ${g.cycle})</option>`;
             });
         })
         .catch(() => {
@@ -25,16 +29,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     // Fetch user's groups and display
-    const userGroupsList = document.getElementById('userGroupsList');
     fetch(`/api/groups/user?phone=${encodeURIComponent(user.phone)}`)
         .then(res => res.json())
         .then(groups => {
             userGroupsList.innerHTML = '';
             if (!groups.length) {
-                userGroupsList.innerHTML = '<li class="list-group-item">You are not part of any groups yet.</li>';
+                userGroupsList.innerHTML = '<li class="list-group-item list-empty">You are not part of any groups yet.</li>';
             } else {
                 groups.forEach(g => {
-                    userGroupsList.innerHTML += `<li class="list-group-item">${g.name} ( 9${g.contribution_amount}, ${g.cycle})</li>`;
+                    userGroupsList.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>${g.name} (₹${g.contribution_amount}, ${g.cycle})</span>
+                        <span class="status-chip status-approved"><i class="bi bi-people"></i> Member</span>
+                    </li>`;
                 });
             }
         })

@@ -6,6 +6,65 @@ import uuid
 
 class GroupService:
     @staticmethod
+    def create_group(name: str, contribution_amount: float, cycle: str, creator_phone: str | None = None):
+        db = SessionLocal()
+        try:
+            # Basic validation
+            if not name or not cycle:
+                return {"error": "name and cycle are required"}
+            try:
+                amount = float(contribution_amount)
+            except Exception:
+                return {"error": "contribution_amount must be a number"}
+            if amount <= 0:
+                return {"error": "contribution_amount must be greater than 0"}
+            allowed_cycles = {"daily", "weekly", "monthly"}
+            if cycle not in allowed_cycles:
+                return {"error": f"cycle must be one of {', '.join(sorted(allowed_cycles))}"}
+
+            group = Group(name=name, contribution_amount=amount, cycle=cycle)
+            db.add(group)
+            db.commit()
+            db.refresh(group)
+
+            # Optionally add creator as a member and create expected deposits
+            if creator_phone:
+                user = db.query(User).filter(User.phone == creator_phone).first()
+                if user:
+                    joined_at = datetime.utcnow()
+                    membership = Membership(user_id=user.id, group_id=group.id, joined_at=joined_at)
+                    db.add(membership)
+                    # Create expected deposits for the creator
+                    GroupService._create_expected_deposits(
+                        db=db,
+                        user_id=str(user.id),
+                        group_id=str(group.id),
+                        group_cycle=group.cycle,
+                        amount=group.contribution_amount,
+                        start_date=joined_at,
+                    )
+                    db.commit()
+
+            return {
+                "message": "Group created successfully",
+                "group": {
+                    "id": str(group.id),
+                    "name": group.name,
+                    "contribution_amount": group.contribution_amount,
+                    "cycle": group.cycle,
+                },
+            }
+        except IntegrityError as e:
+            db.rollback()
+            print(f"Integrity error creating group: {str(e)}")
+            return {"error": "Could not create group. Please try again."}
+        except Exception as e:
+            db.rollback()
+            print(f"Unexpected error in create_group: {str(e)}")
+            return {"error": "An unexpected error occurred. Please try again."}
+        finally:
+            db.close()
+    @staticmethod
     def list_groups():
         db = SessionLocal()
         groups = db.query(Group).all()

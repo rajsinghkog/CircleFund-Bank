@@ -3,18 +3,18 @@
 {% block title %}My Loan Requests{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>My Loan Requests</h2>
+<div class="mt-2">
+    <h2 class="mb-4">My Loan Requests</h2>
     
     <ul class="nav nav-tabs mb-4" id="loanTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
-                Pending
+                <i class="bi bi-hourglass-split me-1"></i> Pending
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved" type="button" role="tab">
-                Approved
+                <i class="bi bi-check2-circle me-1"></i> Approved
             </button>
         </li>
     </ul>

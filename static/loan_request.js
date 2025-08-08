@@ -26,10 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         msgDiv.textContent = '';
         const data = {
-            amount: document.getElementById('amount').value,
+            amount: parseFloat(document.getElementById('amount').value),
             group_id: groupSelect.value,
             user_id: user.id
         };
+        if (!data.group_id || !Number.isFinite(data.amount) || data.amount <= 0) {
+            msgDiv.innerHTML = '<div class="alert alert-danger">Please select a group and enter a valid amount.</div>';
+            return;
+        }
         fetch('/api/loan/request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

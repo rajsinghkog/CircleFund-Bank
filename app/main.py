@@ -25,6 +25,10 @@ def read_root(request: Request):
 def join_group(request: Request):
     return templates.TemplateResponse("join_group.html", {"request": request})
 
+@app.get("/create_group")
+def create_group(request: Request):
+    return templates.TemplateResponse("create_group.html", {"request": request})
+
 @app.get("/deposit")
 def deposit(request: Request):
     return templates.TemplateResponse("deposit.html", {"request": request})

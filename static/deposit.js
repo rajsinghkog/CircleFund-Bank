@@ -14,14 +14,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let groups = [];
     let pendingDeposits = [];
 
-    // Format date to display
-    function formatDate(dateString) {
-        const options = { year: 'numeric', month: 'short', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
-    }
+    // Formatting helpers
+    const formatDate = (d) => (window.cf && cf.formatDate) ? cf.formatDate(d) : (d ? new Date(d).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }) : 'N/A');
+
+    // Simple skeleton renderer
+    const renderSkeleton = (c, r=3) => cf && cf.renderSkeleton ? cf.renderSkeleton(c, r) : (function(container, rows){
+        let html = '<div class="card"><div class="card-body">';
+        for (let i = 0; i < rows; i++) html += '<div class="skeleton" style="height: 18px; margin-bottom: 12px;"></div>';
+        html += '</div></div>'; container.innerHTML = html; })(c, r);
 
     // Load pending deposits
     function loadPendingDeposits(groupId = null) {
+        renderSkeleton(pendingDepositsContainer, 4);
         let url = `/api/deposit/pending?phone=${encodeURIComponent(user.phone)}`;
         if (groupId) {
             url += `&group_id=${groupId}`;
@@ -42,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="alert alert-warning">
                         Failed to load pending deposits. ${err.message || ''}
                     </div>`;
+                if (window.cf && cf.showToast) cf.showToast('Warning', 'Failed to load pending deposits', 'warning');
             });
     }
 
@@ -49,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderPendingDeposits() {
         if (!pendingDeposits.length) {
             pendingDepositsContainer.innerHTML = `
-                <div class="alert alert-info">No pending deposits found.</div>`;
+                <div class="list-empty">No pending deposits found.</div>`;
             return;
         }
 
@@ -73,15 +78,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         pendingDeposits.forEach(deposit => {
             const isOverdue = deposit.is_overdue;
-            const statusClass = isOverdue ? 'danger' : 'warning';
-            const statusText = isOverdue ? 'Overdue' : 'Pending';
+            const statusChip = isOverdue
+                ? '<span class="status-chip status-rejected"><i class="bi bi-exclamation-triangle"></i> Overdue</span>'
+                : '<span class="status-chip status-pending"><i class="bi bi-hourglass-split"></i> Pending</span>';
             
             html += `
-                <tr class="${isOverdue ? 'table-danger' : ''}">
+                <tr>
                     <td>${deposit.group_name}</td>
                     <td>₹${deposit.amount}</td>
                     <td>${formatDate(deposit.expected_date)}</td>
-                    <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                    <td>${statusChip}</td>
                     <td>
                         <button class="btn btn-sm btn-primary pay-now" 
                                 data-amount="${deposit.amount}" 
@@ -155,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Auto-fill amount based on selected group
         if (groupId) {
-            const selectedGroup = groups.find(g => g.id === groupId);
+            const selectedGroup = groups.find(g => String(g.id) === String(groupId));
             if (selectedGroup) {
                 amountInput.value = selectedGroup.contribution_amount;
             }
@@ -198,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Reload pending deposits
             loadPendingDeposits(data.group_id || null);
+            if (window.cf && cf.showToast) cf.showToast('Success', 'Deposit successful', 'success');
         })
         .catch(err => {
             console.error('Deposit error:', err);
@@ -205,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="alert alert-danger">
                     ${err.detail || err.message || 'Failed to process deposit. Please try again.'}
                 </div>`;
+            if (window.cf && cf.showToast) cf.showToast('Error', 'Deposit failed', 'error');
         });
     });
 });

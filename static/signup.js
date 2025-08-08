@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
             phone: document.getElementById('phone').value,
             password: document.getElementById('password').value
         };
+        if (!data.name || !data.email || !data.phone || !data.password) {
+            msgDiv.innerHTML = '<div class="alert alert-danger">Please fill all fields.</div>';
+            return;
+        }
         fetch('/api/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
