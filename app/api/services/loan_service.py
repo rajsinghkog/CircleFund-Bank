@@ -14,7 +14,11 @@ class LoanService:
             user = db.query(User).filter(User.phone == user_phone).first()
             if not user:
                 return {"error": "User not found"}
-            group = db.query(Group).filter(Group.id == group_id).first()
+            try:
+                group_uuid = uuid.UUID(str(group_id))
+            except Exception:
+                return {"error": "Invalid group_id"}
+            group = db.query(Group).filter(Group.id == group_uuid).first()
             if not group:
                 return {"error": "Group not found"}
             membership = db.query(Membership).filter(Membership.user_id == user.id, Membership.group_id == group.id).first()
@@ -34,9 +38,13 @@ class LoanService:
     @staticmethod
     def get_loan(loan_id: str):
         db = SessionLocal()
+        try:
+            loan_uuid = uuid.UUID(str(loan_id))
+        except Exception:
+            return {"error": "Invalid loan_id"}
         loan = db.query(LoanRequest).options(
             joinedload(LoanRequest.group)
-        ).filter(LoanRequest.id == loan_id).first()
+        ).filter(LoanRequest.id == loan_uuid).first()
         db.close()
         
         if not loan:
@@ -50,15 +58,20 @@ class LoanService:
             "amount": float(loan.amount),
             "status": loan.status,
             "created_at": loan.created_at.isoformat(),
-            "due_date": loan.due_date.isoformat() if loan.due_date else None
+            "due_date": loan.due_date.isoformat() if loan.due_date else None,
+            "withdrawn_at": loan.withdrawn_at.isoformat() if loan.withdrawn_at else None
         }
         
     @staticmethod
     def get_loans_by_user(user_id: str, status: str = None):
         db = SessionLocal()
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except Exception:
+            return []
         query = db.query(LoanRequest).options(
             joinedload(LoanRequest.group)
-        ).filter(LoanRequest.user_id == user_id)
+        ).filter(LoanRequest.user_id == user_uuid)
         
         if status:
             query = query.filter(LoanRequest.status == status)
@@ -74,7 +87,8 @@ class LoanService:
             "amount": float(loan.amount),
             "status": loan.status,
             "created_at": loan.created_at.isoformat(),
-            "due_date": loan.due_date.isoformat() if loan.due_date else None
+            "due_date": loan.due_date.isoformat() if loan.due_date else None,
+            "withdrawn_at": loan.withdrawn_at.isoformat() if loan.withdrawn_at else None
         } for loan in loans]
         
     @staticmethod

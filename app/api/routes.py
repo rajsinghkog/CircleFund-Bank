@@ -32,12 +32,19 @@ async def get_me(request: Request):
     if not phone and not user_id:
         return {"error": "phone or user_id required"}
     if phone:
-        return UserService.get_user_by_phone(phone)
+        return UserService.get_user_profile(phone)
     # If user_id is present, fetch user by id
     from app.db.models import User, Membership
     from app.db.database import SessionLocal
     db = SessionLocal()
-    user = db.query(User).filter(User.id == user_id).first()
+    # Cast cookie user_id to UUID for comparisons
+    import uuid as _uuid
+    try:
+        _uid = _uuid.UUID(str(user_id))
+    except Exception:
+        db.close()
+        return {"error": "Invalid user_id"}
+    user = db.query(User).filter(User.id == _uid).first()
     group_id = None
     if user:
         membership = db.query(Membership).filter(Membership.user_id == user.id).first()
@@ -69,6 +76,7 @@ async def signout(response: Response):
 
 # --- Group ---
 from app.api.services.group_service import GroupService
+from app.models.schemas import GroupCreate
 
 
 @router.get('/groups')
@@ -76,21 +84,17 @@ def list_groups():
     return GroupService.list_groups()
 
 @router.post('/groups')
-async def create_group(request: Request):
-    data = await request.json()
-    name = data.get('name')
-    contribution_amount = data.get('contribution_amount')
-    cycle = data.get('cycle')
-    creator_phone = data.get('creator_phone')
-    return GroupService.create_group(name=name, contribution_amount=contribution_amount, cycle=cycle, creator_phone=creator_phone)
+async def create_group(payload: GroupCreate):
+    return GroupService.create_group(
+        name=payload.name,
+        contribution_amount=payload.contribution_amount,
+        cycle=payload.cycle.value
+    )
 
 @router.post('/groups/join')
-def join_group(request: Request):
+async def join_group(request: Request):
     # Expecting JSON: {"phone": ..., "group_id": ...}
-    import asyncio
-    async def get_data():
-        return await request.json()
-    data = asyncio.run(get_data())
+    data = await request.json()
     phone = data.get('phone')
     group_id = data.get('group_id')
     if not phone or not group_id:
@@ -124,6 +128,13 @@ async def submit_deposit(request: Request):
     
     if not all([user_phone, group_id, amount]):
         return {"error": "phone, group_id, and amount required"}
+    # Normalize amount
+    try:
+        amount = float(amount)
+    except Exception:
+        return {"error": "amount must be a number"}
+    if amount <= 0:
+        return {"error": "amount must be greater than 0"}
     
     # Submit the deposit
     result = DepositService.submit_deposit(user_phone, group_id, amount)
@@ -134,10 +145,13 @@ async def submit_deposit(request: Request):
         from app.db.models import ExpectedDeposit, User
         db = SessionLocal()
         try:
-            expected = db.query(ExpectedDeposit).filter(
-                ExpectedDeposit.id == expected_deposit_id,
-                ExpectedDeposit.user_id == db.query(User).filter(User.phone == user_phone).first().id
-            ).first()
+            user = db.query(User).filter(User.phone == user_phone).first()
+            expected = None
+            if user:
+                expected = db.query(ExpectedDeposit).filter(
+                    ExpectedDeposit.id == expected_deposit_id,
+                    ExpectedDeposit.user_id == user.id
+                ).first()
             
             if expected:
                 expected.status = 'completed'
@@ -193,7 +207,8 @@ from app.api.services.repayment_service import RepaymentService
 from app.api.endpoints.loans import router as loans_router
 
 # Include the loans router with the /api/loans prefix
-router.include_router(loans_router, prefix="/api/loans", tags=["loans"])
+# Since this router is mounted at /api from main.py, use relative prefix here
+router.include_router(loans_router, prefix="/loans", tags=["loans"])
 
 # Keep the old endpoints for backward compatibility
 @router.post('/loan/request')
@@ -217,7 +232,9 @@ async def vote_on_loan(id: str, request: Request):
     vote = data.get('vote')  # 'approve' or 'reject'
     if not voter_phone or not vote or vote not in ['approve', 'reject']:
         return {"error": "voter_phone and vote ('approve' or 'reject') required"}
-    return VoteService.vote_on_loan(id, voter_phone, vote)
+    # Map frontend values to service values
+    mapped_vote = 'yes' if vote == 'approve' else 'no'
+    return VoteService.vote_on_loan(voter_phone, id, mapped_vote)
 
 @router.post('/loan/{id}/repay')
 async def repay_loan(id: str, request: Request):
@@ -225,7 +242,25 @@ async def repay_loan(id: str, request: Request):
     amount = data.get('amount')
     if not amount or amount <= 0:
         return {"error": "amount must be greater than 0"}
-    return RepaymentService.make_repayment(id, amount)
+    # Determine the current user from cookie and forward phone to service
+    user_id = request.cookies.get('user_id')
+    if not user_id:
+        return {"error": "Not authenticated"}
+    from app.db.database import SessionLocal
+    from app.db.models import User
+    import uuid as _uuid
+    db = SessionLocal()
+    try:
+        try:
+            _uid = _uuid.UUID(str(user_id))
+        except Exception:
+            return {"error": "Invalid user_id"}
+        user = db.query(User).filter(User.id == _uid).first()
+        if not user:
+            return {"error": "User not found"}
+        return RepaymentService.repay_loan(user.phone, id, amount)
+    finally:
+        db.close()
 
 # Optionally, add repayments to view_loan
 @router.get('/loan/{id}/repayments')

@@ -14,8 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
       name: document.getElementById('groupName').value.trim(),
       contribution_amount: parseFloat(document.getElementById('contributionAmount').value),
-      cycle: document.getElementById('cycle').value,
-      creator_phone: user.phone
+      cycle: document.getElementById('cycle').value
     };
     fetch('/api/groups', {
       method: 'POST',

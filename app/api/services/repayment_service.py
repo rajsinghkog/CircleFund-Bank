@@ -12,7 +12,11 @@ class RepaymentService:
             user = db.query(User).filter(User.phone == user_phone).first()
             if not user:
                 return {"error": "User not found"}
-            loan = db.query(LoanRequest).filter(LoanRequest.id == loan_id).first()
+            try:
+                loan_uuid = uuid.UUID(str(loan_id))
+            except Exception:
+                return {"error": "Invalid loan_id"}
+            loan = db.query(LoanRequest).filter(LoanRequest.id == loan_uuid).first()
             if not loan:
                 return {"error": "Loan not found"}
             if loan.user_id != user.id:
@@ -25,13 +29,20 @@ class RepaymentService:
         except IntegrityError:
             db.rollback()
             return {"error": "Could not submit repayment"}
+        except Exception as e:
+            db.rollback()
+            return {"error": f"Could not submit repayment: {str(e)}"}
         finally:
             db.close()
 
     @staticmethod
     def get_repayments(loan_id: str):
         db = SessionLocal()
-        repayments = db.query(Repayment).filter(Repayment.loan_id == loan_id).order_by(Repayment.date.desc()).all()
+        try:
+            loan_uuid = uuid.UUID(str(loan_id))
+        except Exception:
+            return []
+        repayments = db.query(Repayment).filter(Repayment.loan_id == loan_uuid).order_by(Repayment.date.desc()).all()
         db.close()
         return [{
             "id": str(r.id),

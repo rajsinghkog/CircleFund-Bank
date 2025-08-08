@@ -12,7 +12,13 @@ class VoteService:
             user = db.query(User).filter(User.phone == user_phone).first()
             if not user:
                 return {"error": "User not found"}
-            loan = db.query(LoanRequest).filter(LoanRequest.id == loan_id).first()
+            # Ensure UUID for loan id
+            import uuid as _uuid
+            try:
+                loan_uuid = _uuid.UUID(str(loan_id))
+            except Exception:
+                return {"error": "Invalid loan_id"}
+            loan = db.query(LoanRequest).filter(LoanRequest.id == loan_uuid).first()
             if not loan:
                 return {"error": "Loan not found"}
             if loan.status != "pending":

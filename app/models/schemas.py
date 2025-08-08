@@ -11,6 +11,16 @@ class TransactionType(str, Enum):
     LOAN_WITHDRAWAL = "loan_withdrawal"
     REPAYMENT = "repayment"
 
+class GroupCycle(str, Enum):
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+
+class GroupCreate(BaseModel):
+    name: str
+    contribution_amount: float = Field(..., gt=0, description="Contribution amount must be greater than 0")
+    cycle: GroupCycle
+
 class LoanRequestBase(BaseModel):
     group_id: UUID
     amount: float = Field(..., gt=0, description="Loan amount must be greater than 0")

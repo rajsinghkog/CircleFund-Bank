@@ -39,9 +39,11 @@ class JWTBearer(HTTPBearer):
     
     def verify_jwt(self, token: str) -> Optional[dict]:
         try:
+            # jwt.decode will raise if token is invalid or expired
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload if payload["exp"] >= datetime.utcnow().timestamp() else None
-        except JWTError:
+            return payload
+        except JWTError as e:
+            print(f"JWT decode error: {str(e)}")
             return None
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -51,6 +53,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     
-    to_encode.update({"exp": expire})
+    # Use a numeric timestamp for better interoperability
+    to_encode.update({"exp": int(expire.timestamp())})
+    print(f"create_access_token using SECRET_KEY='{SECRET_KEY}' algorithm='{ALGORITHM}' claims={list(to_encode.keys())}")
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

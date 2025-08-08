@@ -1,6 +1,7 @@
 from app.db.models import Deposit, User, Group, Membership, ExpectedDeposit
 from datetime import datetime, timedelta
 from app.db.database import SessionLocal
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 import uuid
@@ -18,7 +19,7 @@ class DepositService:
         return last_date + timedelta(days=1)  # default to daily
 
     @classmethod
-    def _create_expected_deposits(cls, db, user_id: str, group_id: str, group_cycle: str, amount: float, membership_date: datetime):
+    def _create_expected_deposits(cls, db, user_id, group_id, group_cycle: str, amount: float, membership_date: datetime):
         # Get the last expected deposit date for this user and group
         last_expected = db.query(ExpectedDeposit).filter(
             ExpectedDeposit.user_id == user_id,
@@ -51,7 +52,12 @@ class DepositService:
             if not user:
                 return {"error": "User not found"}
                 
-            group = db.query(Group).filter(Group.id == group_id).first()
+            # Ensure UUID when querying
+            try:
+                group_uuid = uuid.UUID(str(group_id))
+            except Exception:
+                return {"error": "Invalid group_id"}
+            group = db.query(Group).filter(Group.id == group_uuid).first()
             if not group:
                 return {"error": "Group not found"}
                 
@@ -87,10 +93,10 @@ class DepositService:
             
             # Create future expected deposits if needed
             DepositService._create_expected_deposits(
-                db, 
-                str(user.id), 
-                str(group.id), 
-                group.cycle, 
+                db,
+                user.id,
+                group.id,
+                group.cycle,
                 group.contribution_amount,
                 membership.joined_at
             )
@@ -131,7 +137,11 @@ class DepositService:
             )
             
             if group_id:
-                query = query.filter(ExpectedDeposit.group_id == group_id)
+                try:
+                    group_uuid = uuid.UUID(str(group_id))
+                except Exception:
+                    return {"error": "Invalid group_id"}
+                query = query.filter(ExpectedDeposit.group_id == group_uuid)
                 
             pending = query.order_by(ExpectedDeposit.expected_date).all()
             
@@ -162,7 +172,11 @@ class DepositService:
             query = db.query(Deposit).filter(Deposit.user_id == user.id)
             
             if group_id:
-                query = query.filter(Deposit.group_id == group_id)
+                try:
+                    group_uuid = uuid.UUID(str(group_id))
+                except Exception:
+                    return {"error": "Invalid group_id"}
+                query = query.filter(Deposit.group_id == group_uuid)
                 
             deposits = query.order_by(Deposit.date.desc()).all()
             
@@ -187,16 +201,16 @@ class DepositService:
             db.close()
             return {"error": "User not found"}
         # Total deposits
-        total_deposits = db.query(Deposit).filter(Deposit.user_id == user.id).with_entities(db.func.sum(Deposit.amount)).scalar() or 0.0
+        total_deposits = db.query(func.sum(Deposit.amount)).filter(Deposit.user_id == user.id).scalar() or 0.0
         # Total loans taken (approved only)
         from app.db.models import LoanRequest, Repayment
-        total_loans = db.query(LoanRequest).filter(LoanRequest.user_id == user.id, LoanRequest.status == "approved").with_entities(db.func.sum(LoanRequest.amount)).scalar() or 0.0
+        total_loans = db.query(func.sum(LoanRequest.amount)).filter(LoanRequest.user_id == user.id, LoanRequest.status == "approved").scalar() or 0.0
         # Total repayments made by user (for their loans)
         user_loans = db.query(LoanRequest).filter(LoanRequest.user_id == user.id, LoanRequest.status == "approved").all()
         loan_ids = [loan.id for loan in user_loans]
         total_repaid = 0.0
         if loan_ids:
-            total_repaid = db.query(Repayment).filter(Repayment.loan_id.in_(loan_ids)).with_entities(db.func.sum(Repayment.amount)).scalar() or 0.0
+            total_repaid = db.query(func.sum(Repayment.amount)).filter(Repayment.loan_id.in_(loan_ids)).scalar() or 0.0
         # Outstanding loans = total_loans - total_repaid
         outstanding_loans = total_loans - total_repaid
         # Total balance = deposits - (loans - repayments)
