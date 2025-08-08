@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Logging out...{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height:40vh;">
+  <div class="text-center">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="mt-3 text-muted">Signing you out...</div>
+  </div>
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function(){
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    } catch (_) {}
+    setTimeout(function(){ window.location.href = '/login'; }, 400);
+  })();
+  
+</script>
+{% endblock %}
+

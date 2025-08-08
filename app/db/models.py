@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = 'users'
@@ -19,6 +20,8 @@ class Group(Base):
     name = Column(String, nullable=False)
     contribution_amount = Column(Float, default=5.0)
     cycle = Column(String, default='daily')
+    # Relationships
+    loans = relationship("LoanRequest", back_populates="group", cascade="all, delete-orphan")
 
 class Membership(Base):
     __tablename__ = 'memberships'
@@ -56,6 +59,8 @@ class LoanRequest(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     due_date = Column(DateTime)
     withdrawn_at = Column(DateTime, nullable=True)
+    # Relationships
+    group = relationship("Group", back_populates="loans")
 
 class Vote(Base):
     __tablename__ = 'votes'

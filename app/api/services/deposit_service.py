@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from app.db.database import SessionLocal
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
 import uuid
 
 class DepositService:
@@ -45,7 +44,7 @@ class DepositService:
         db.commit()
 
     @staticmethod
-    def submit_deposit(user_phone: str, group_id: str, amount: float):
+    def submit_deposit(user_phone: str, group_id: str, amount: float, expected_deposit_id: str | None = None):
         db = SessionLocal()
         try:
             user = db.query(User).filter(User.phone == user_phone).first()
@@ -79,13 +78,26 @@ class DepositService:
             db.add(deposit)
             db.flush()  # Get the deposit ID
 
-            # Find and update the expected deposit
-            expected_deposit = db.query(ExpectedDeposit).filter(
-                ExpectedDeposit.user_id == user.id,
-                ExpectedDeposit.group_id == group.id,
-                ExpectedDeposit.status == 'pending',
-                ExpectedDeposit.expected_date <= datetime.utcnow()
-            ).order_by(ExpectedDeposit.expected_date).first()
+            # If a specific expected_deposit_id is provided, mark it completed,
+            # else fulfill the earliest pending expected deposit up to now.
+            expected_deposit = None
+            if expected_deposit_id:
+                try:
+                    ed_uuid = uuid.UUID(str(expected_deposit_id))
+                except Exception:
+                    return {"error": "Invalid expected_deposit_id"}
+                expected_deposit = db.query(ExpectedDeposit).filter(
+                    ExpectedDeposit.id == ed_uuid,
+                    ExpectedDeposit.user_id == user.id,
+                    ExpectedDeposit.group_id == group.id,
+                ).first()
+            if not expected_deposit:
+                expected_deposit = db.query(ExpectedDeposit).filter(
+                    ExpectedDeposit.user_id == user.id,
+                    ExpectedDeposit.group_id == group.id,
+                    ExpectedDeposit.status == 'pending',
+                    ExpectedDeposit.expected_date <= datetime.utcnow()
+                ).order_by(ExpectedDeposit.expected_date).first()
 
             if expected_deposit:
                 expected_deposit.status = 'completed'

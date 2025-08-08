@@ -61,6 +61,57 @@
     container.innerHTML = html;
   };
 
+  // --- Auth helpers ---
+  cf.getUser = function(){
+    try {
+      const raw = localStorage.getItem('user');
+      if (!raw || raw === 'undefined' || raw === 'null') {
+        if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+        return null;
+      }
+      return JSON.parse(raw);
+    } catch (_) {
+      localStorage.removeItem('user');
+      return null;
+    }
+  };
+
+  cf.setAuth = function(user, token){
+    try {
+      if (user) localStorage.setItem('user', JSON.stringify(user));
+      if (token) localStorage.setItem('token', token);
+    } catch (_) {}
+  };
+
+  cf.clearAuth = function(){
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    } catch (_) {}
+  };
+
+  cf.hydrateUserFromCookie = async function(){
+    try {
+      const res = await fetch('/api/me');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && data.user) {
+        cf.setAuth(data.user, null);
+        return data.user;
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  cf.requireAuth = async function(){
+    let user = cf.getUser();
+    if (!user) user = await cf.hydrateUserFromCookie();
+    if (!user) {
+      window.location.href = '/login';
+      return null;
+    }
+    return user;
+  };
+
   cf.fetchJson = async function(url, options){
     const res = await fetch(url, options);
     const data = await res.json().catch(() => ({}));

@@ -9,11 +9,13 @@ class UserBase(BaseModel):
     created_at: Optional[datetime] = None
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, description="Password must be at least 6 characters long")
+    # Password removed in simplified auth-less flow
+    password: str | None = None
 
 class UserLogin(BaseModel):
     phone: str
-    password: str
+    # Password removed
+    password: str | None = None
 
 class Token(BaseModel):
     access_token: str

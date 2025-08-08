@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}My Statement - CircleFund Bank{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="mb-0">My Statement</h2>
+      <div class="text-muted small" id="stmtUser"></div>
+    </div>
+    <div id="statementContainer"></div>
+  </div>
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/statement.js"></script>
+{% endblock %}
+

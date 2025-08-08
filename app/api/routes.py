@@ -1,6 +1,5 @@
 
-from fastapi import APIRouter, Depends, Request, Response
-from typing import List
+from fastapi import APIRouter, Request, Response
 
 router = APIRouter()
 
@@ -16,12 +15,11 @@ from app.api.services.user_service import UserService
 async def signup(request: Request):
     data = await request.json()
     name = data.get('name')
-    phone = data.get('phone')
-    password = data.get('password')
-    if not name or not phone or not password:
-        return {"error": "Name, phone, and password required"}
+    phone = data.get('phone') or data.get('username')
+    if not name or not phone:
+        return {"error": "Name and phone required"}
     from app.models.user import UserCreate
-    return UserService.signup(UserCreate(id=None, name=name, phone=phone, password=password))
+    return UserService.signup(UserCreate(id=None, name=name, phone=phone, password=""))
 
 
 
@@ -33,39 +31,20 @@ async def get_me(request: Request):
         return {"error": "phone or user_id required"}
     if phone:
         return UserService.get_user_profile(phone)
-    # If user_id is present, fetch user by id
-    from app.db.models import User, Membership
-    from app.db.database import SessionLocal
-    db = SessionLocal()
-    # Cast cookie user_id to UUID for comparisons
-    import uuid as _uuid
-    try:
-        _uid = _uuid.UUID(str(user_id))
-    except Exception:
-        db.close()
-        return {"error": "Invalid user_id"}
-    user = db.query(User).filter(User.id == _uid).first()
-    group_id = None
-    if user:
-        membership = db.query(Membership).filter(Membership.user_id == user.id).first()
-        if membership:
-            group_id = str(membership.group_id)
-    db.close()
-    if not user:
-        return {"error": "User not found"}
-    return {"user": {"id": str(user.id), "name": user.name, "phone": user.phone, "group_id": group_id}}
+    # If user_id is present, use centralized helper
+    return UserService.get_user_profile_by_id(user_id)
 
 @router.post('/signin')
 async def signin(request: Request, response: Response):
     data = await request.json()
-    phone = data.get('phone')
-    password = data.get('password')
-    if not phone or not password:
-        return {"error": "Phone and password required"}
+    phone = data.get('phone') or data.get('username')
+    # Password not required in simplified auth
+    if not phone:
+        return {"error": "Username/phone required"}
     from app.models.user import UserLogin
-    result = UserService.signin(UserLogin(phone=phone, password=password))
+    result = UserService.signin(UserLogin(phone=phone, password=""))
     if result.get('user'):
-        # Set a secure cookie with user id
+        # Set cookie with user id
         response.set_cookie(key="user_id", value=result['user']['id'], httponly=True, samesite="lax")
     return result
 
@@ -115,7 +94,6 @@ def get_group(id: str):
 
 # --- Deposit ---
 from app.api.services.deposit_service import DepositService
-from datetime import datetime
 
 
 @router.post('/deposit')
@@ -136,35 +114,8 @@ async def submit_deposit(request: Request):
     if amount <= 0:
         return {"error": "amount must be greater than 0"}
     
-    # Submit the deposit
-    result = DepositService.submit_deposit(user_phone, group_id, amount)
-    
-    # If we have an expected deposit ID, mark it as completed
-    if expected_deposit_id and isinstance(result, dict) and 'deposit_id' in result:
-        from app.db.database import SessionLocal
-        from app.db.models import ExpectedDeposit, User
-        db = SessionLocal()
-        try:
-            user = db.query(User).filter(User.phone == user_phone).first()
-            expected = None
-            if user:
-                expected = db.query(ExpectedDeposit).filter(
-                    ExpectedDeposit.id == expected_deposit_id,
-                    ExpectedDeposit.user_id == user.id
-                ).first()
-            
-            if expected:
-                expected.status = 'completed'
-                expected.deposit_id = result['deposit_id']
-                expected.updated_at = datetime.utcnow()
-                db.commit()
-        except Exception as e:
-            db.rollback()
-            print(f"Error updating expected deposit: {str(e)}")
-        finally:
-            db.close()
-    
-    return result
+    # Submit the deposit (handles expected deposit internally)
+    return DepositService.submit_deposit(user_phone, group_id, amount, expected_deposit_id)
 
 @router.get('/deposit/history')
 def deposit_history(request: Request):
@@ -221,6 +172,31 @@ async def request_loan(request: Request):
         return {"error": "phone, group_id, and amount required"}
     return LoanService.request_loan(phone, group_id, amount)
 
+# Define fixed routes BEFORE the dynamic {id} route to avoid collisions
+# --- Voting dashboard legacy support ---
+@router.get('/loan/pending')
+def pending_loans_for_user(request: Request):
+    user_id = request.query_params.get('user_id')
+    if not user_id:
+        return []
+    return LoanService.get_pending_loans_for_user(user_id)
+
+# My loans with approvals (legacy for loan_request page sidebar)
+@router.get('/loan/my')
+def my_loans(request: Request):
+    user_id = request.query_params.get('user_id')
+    status = request.query_params.get('status')
+    if not user_id:
+        return []
+    return LoanService.get_loans_for_user_with_votes(user_id, status)
+
+# All loans (admin/dashboard helper)
+@router.get('/loan/all')
+def all_loans(request: Request):
+    status = request.query_params.get('status')
+    group_id = request.query_params.get('group_id')
+    return LoanService.get_all_loans(status=status, group_id=group_id)
+
 @router.get('/loan/{id}')
 def view_loan(id: str):
     return LoanService.get_loan(id)
@@ -242,25 +218,15 @@ async def repay_loan(id: str, request: Request):
     amount = data.get('amount')
     if not amount or amount <= 0:
         return {"error": "amount must be greater than 0"}
-    # Determine the current user from cookie and forward phone to service
     user_id = request.cookies.get('user_id')
     if not user_id:
         return {"error": "Not authenticated"}
-    from app.db.database import SessionLocal
-    from app.db.models import User
-    import uuid as _uuid
-    db = SessionLocal()
-    try:
-        try:
-            _uid = _uuid.UUID(str(user_id))
-        except Exception:
-            return {"error": "Invalid user_id"}
-        user = db.query(User).filter(User.id == _uid).first()
-        if not user:
-            return {"error": "User not found"}
-        return RepaymentService.repay_loan(user.phone, id, amount)
-    finally:
-        db.close()
+    # Resolve user via helper
+    user_profile = UserService.get_user_profile_by_id(user_id)
+    if isinstance(user_profile, dict) and user_profile.get('error'):
+        return user_profile
+    user_phone = user_profile['user']['phone']
+    return RepaymentService.repay_loan(user_phone, id, amount)
 
 # Optionally, add repayments to view_loan
 @router.get('/loan/{id}/repayments')

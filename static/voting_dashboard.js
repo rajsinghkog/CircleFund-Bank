@@ -1,5 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    function getStoredUser(){
+        try {
+            const raw = localStorage.getItem('user');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+                return null;
+            }
+            return JSON.parse(raw);
+        } catch (_) {
+            localStorage.removeItem('user');
+            return null;
+        }
+    }
+    const user = getStoredUser();
     if (!user) {
         window.location.href = '/login';
         return;
@@ -9,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Skeleton
     pendingLoansDiv.innerHTML = '<div class="skeleton" style="height:56px; margin-bottom:12px"></div><div class="skeleton" style="height:56px"></div>';
 
-    // Fetch pending loans for user's group(s)
+    // Fetch pending loans for user's group(s) - using legacy-compatible endpoint if available
     fetch('/api/loan/pending?user_id=' + encodeURIComponent(user.id))
         .then(res => res.json())
         .then(loans => {
@@ -45,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/loan/${loanId}/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vote, voter_id: user.id })
+                body: JSON.stringify({ vote: vote === 'yes' ? 'approve' : 'reject', voter_phone: user.phone })
             })
             .then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)))
             .then(() => {

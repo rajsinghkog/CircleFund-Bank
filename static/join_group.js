@@ -1,5 +1,19 @@
 function initJoinGroup(){
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    // Safely parse stored user (handle 'undefined'/'null' strings)
+    function getStoredUser(){
+        try {
+            const raw = localStorage.getItem('user');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+                return null;
+            }
+            return JSON.parse(raw);
+        } catch (_) {
+            localStorage.removeItem('user');
+            return null;
+        }
+    }
+    const user = getStoredUser();
     if (!user) {
         window.location.href = '/login';
         return;

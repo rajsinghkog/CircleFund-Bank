@@ -49,6 +49,10 @@ A simple ATM bank application built with FastAPI. It supports group-based saving
     uv run uvicorn app.main:app --reload
     ```
 
+For Local Development
+
+DB_USE_SQLITE=true uv run --python 3.12 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 | cat
+
 ## Deposit Tracking Feature
 
 The application now includes a deposit tracking system that helps users manage their periodic contributions to savings groups:

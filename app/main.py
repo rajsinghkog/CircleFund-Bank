@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-import os
 
 app = FastAPI()
 
@@ -16,40 +15,34 @@ app.mount('/static', StaticFiles(directory='static'), name='static')
 # Set up Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
-# Example route using templates
-@app.get("/")
-def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/join_group")
-def join_group(request: Request):
-    return templates.TemplateResponse("join_group.html", {"request": request})
+def make_template_handler(template_name: str):
+    async def handler(request: Request):
+        return templates.TemplateResponse(template_name, {"request": request})
+    return handler
 
-@app.get("/create_group")
-def create_group(request: Request):
-    return templates.TemplateResponse("create_group.html", {"request": request})
 
-@app.get("/deposit")
-def deposit(request: Request):
-    return templates.TemplateResponse("deposit.html", {"request": request})
+# Map paths to templates and register handlers programmatically
+_template_routes = [
+    ("/", "index.html"),
+    ("/join_group", "join_group.html"),
+    ("/create_group", "create_group.html"),
+    ("/deposit", "deposit.html"),
+    ("/repayment_tracker", "repayment_tracker.html"),
+    ("/voting_dashboard", "voting_dashboard.html"),
+    ("/loan_request", "loan_request.html"),
+    ("/login", "login.html"),
+    ("/signup", "signup.html"),
+    ("/statement", "statement.html"),
+]
 
-@app.get("/repayment_tracker")
-def repayment_tracker(request: Request):
-    return templates.TemplateResponse("repayment_tracker.html", {"request": request})
+for path, tpl in _template_routes:
+    app.add_api_route(path, make_template_handler(tpl), methods=["GET"])
 
-@app.get("/voting_dashboard")
-def voting_dashboard(request: Request):
-    return templates.TemplateResponse("voting_dashboard.html", {"request": request})
 
-@app.get("/loan_request")
-def loan_request(request: Request):
-    return templates.TemplateResponse("loan_request.html", {"request": request})
-
-@app.get("/login")
-def login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.get("/signup")
-def signup(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request})
+@app.get("/logout")
+async def logout(request: Request):
+    response = templates.TemplateResponse("logout.html", {"request": request})
+    response.delete_cookie(key="user_id")
+    return response
 

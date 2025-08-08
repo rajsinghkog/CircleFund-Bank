@@ -1,5 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    function getStoredUser(){
+        try {
+            const raw = localStorage.getItem('user');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+                return null;
+            }
+            return JSON.parse(raw);
+        } catch (_) {
+            localStorage.removeItem('user');
+            return null;
+        }
+    }
+    const user = getStoredUser();
     if (!user) {
         window.location.href = '/login';
         return;
@@ -24,9 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
         pendingLoansContainer.innerHTML = '<div class="skeleton" style="height:48px; margin-bottom:12px"></div><div class="skeleton" style="height:48px"></div>';
         approvedLoansContainer.innerHTML = '<div class="skeleton" style="height:48px; margin-bottom:12px"></div><div class="skeleton" style="height:48px"></div>';
         try {
+            // Using legacy-compatible endpoints for listing loans per user
             const [pendingRes, approvedRes] = await Promise.all([
-                fetch(`/api/loans?user_id=${user.id}&status=pending`),
-                fetch(`/api/loans?user_id=${user.id}&status=approved`)
+                fetch(`/api/loan/my?user_id=${user.id}&status=pending`),
+                fetch(`/api/loan/my?user_id=${user.id}&status=approved`)
             ]);
 
             const pendingData = await pendingRes.json();
@@ -127,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(`/api/loans/${currentWithdrawLoanId}/withdraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: user.id })
+                body: JSON.stringify({})
             });
             const result = await response.json();
             if (response.ok) {

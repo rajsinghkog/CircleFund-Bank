@@ -1,5 +1,23 @@
-function renderNavbar() {
-  const user = localStorage.getItem('user');
+async function renderNavbar() {
+  // Safely detect logged-in user
+  let user = null;
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw && raw !== 'undefined' && raw !== 'null') user = JSON.parse(raw);
+    else if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+  } catch (_) { localStorage.removeItem('user'); }
+
+  // If no user in localStorage, try to recover from auth cookie via /api/me
+  if (!user) {
+    try {
+      const res = await fetch('/api/me');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && data.user) {
+        user = data.user;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+    } catch (_) { /* ignore */ }
+  }
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const themeIcon = isDark ? 'bi-sun' : 'bi-moon-stars';
   const themeLabel = isDark ? 'Light' : 'Dark';
@@ -23,7 +41,8 @@ function renderNavbar() {
       <li class="nav-item"><a class="nav-link ${path==='/loan_request'?'active':''}" href="/loan_request">Loan Request</a></li>
       <li class="nav-item"><a class="nav-link ${path==='/voting_dashboard'?'active':''}" href="/voting_dashboard">Voting Dashboard</a></li>
       <li class="nav-item"><a class="nav-link ${path==='/repayment_tracker'?'active':''}" href="/repayment_tracker">Repayment Tracker</a></li>
-      <li class="nav-item"><a class="nav-link" href="#" id="logoutBtn">Logout</a></li>
+      <li class="nav-item"><a class="nav-link ${path==='/statement'?'active':''}" href="/statement">My Statement</a></li>
+      <li class="nav-item"><a class="nav-link" href="/logout" id="logoutBtn">Logout</a></li>
     `;
   } else {
     nav += `
@@ -41,11 +60,7 @@ function renderNavbar() {
   if (user) {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      });
+      // handled by /logout page
     }
   }
 

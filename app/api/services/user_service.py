@@ -1,21 +1,13 @@
-from datetime import datetime, timedelta
-import os
+from datetime import datetime
 from typing import Optional
-from jose import jwt
-from passlib.context import CryptContext
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models import User, Membership
 from app.db.database import SessionLocal
-from app.models.user import UserCreate, UserLogin, Token
-from app.api.auth.auth_bearer import SECRET_KEY, ALGORITHM, create_access_token
+from app.models.user import UserCreate, UserLogin
+import uuid
 
 class UserService:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    
-    @staticmethod
-    def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        return create_access_token(data, expires_delta)
         
     @staticmethod
     def get_user_by_phone(phone: str):
@@ -29,7 +21,12 @@ class UserService:
     def get_user_by_id(user_id: str):
         db = SessionLocal()
         try:
-            return db.query(User).filter(User.id == user_id).first()
+            # Cast to UUID if provided as string
+            try:
+                user_uuid = uuid.UUID(str(user_id))
+            except Exception:
+                return None
+            return db.query(User).filter(User.id == user_uuid).first()
         finally:
             db.close()
 
@@ -37,37 +34,25 @@ class UserService:
     def signup(user_data: UserCreate):
         db = SessionLocal()
         try:
+            # Treat phone as username for simplified auth-less flow
+            if not user_data.phone:
+                return {"error": "username is required"}
             existing = db.query(User).filter(User.phone == user_data.phone).first()
             if existing:
-                return {"error": "User already exists"}
-                
-            password_hash = UserService.pwd_context.hash(user_data.password)
+                # Return existing user without token
+                return {"message": "Signup successful", "user": {"id": str(existing.id), "name": existing.name, "phone": existing.phone}}
+
+            # Store name and phone as the same username; empty password hash
             user = User(
-                name=user_data.name,
+                name=user_data.name or user_data.phone,
                 phone=user_data.phone,
-                password_hash=password_hash
+                password_hash=""
             )
             db.add(user)
             db.commit()
             db.refresh(user)
-            
-            # Generate access token
-            access_token_expires = timedelta(minutes=30)
-            access_token = UserService.create_access_token(
-                data={"sub": str(user.id), "phone": user.phone},
-                expires_delta=access_token_expires
-            )
-            
-            return {
-                "message": "Signup successful", 
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
-                    "id": str(user.id), 
-                    "name": user.name, 
-                    "phone": user.phone
-                }
-            }
+
+            return {"message": "Signup successful", "user": {"id": str(user.id), "name": user.name, "phone": user.phone}}
         except IntegrityError:
             db.rollback()
             return {"error": "User already exists"}
@@ -101,36 +86,44 @@ class UserService:
             db.close()
 
     @staticmethod
-    def authenticate_user(phone: str, password: str):
-        user = UserService.get_user_by_phone(phone)
-        if not user:
-            return None
-        if not UserService.pwd_context.verify(password, user.password_hash):
-            return None
-        return user
+    def get_user_profile_by_id(user_id: str):
+        db = SessionLocal()
+        try:
+            try:
+                user_uuid = uuid.UUID(str(user_id))
+            except Exception:
+                return {"error": "Invalid user_id"}
+            user = db.query(User).filter(User.id == user_uuid).first()
+            if not user:
+                return {"error": "User not found"}
+            group_id = None
+            membership = db.query(Membership).filter(Membership.user_id == user.id).first()
+            if membership:
+                group_id = str(membership.group_id)
+            return {
+                "user": {
+                    "id": str(user.id),
+                    "name": user.name,
+                    "phone": user.phone,
+                    "group_id": group_id
+                }
+            }
+        finally:
+            db.close()
+
+    # authenticate_user removed in simplified flow
 
     @staticmethod
     def signin(login_data: UserLogin):
         try:
-            user = UserService.authenticate_user(login_data.phone, login_data.password)
+            # Simplified: locate by username (phone field). Create if not exists.
+            db = SessionLocal()
+            user = db.query(User).filter(User.phone == login_data.phone).first()
             if not user:
-                return {"error": "Incorrect phone or password"}
-                
-            # Generate access token
-            access_token_expires = timedelta(minutes=30)
-            access_token = UserService.create_access_token(
-                data={"sub": str(user.id), "phone": user.phone},
-                expires_delta=access_token_expires
-            )
-            
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": {
-                    "id": str(user.id),
-                    "name": user.name,
-                    "phone": user.phone
-                }
-            }
+                user = User(name=login_data.phone, phone=login_data.phone, password_hash="")
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            return {"user": {"id": str(user.id), "name": user.name, "phone": user.phone}}
         except Exception as e:
             return {"error": str(e)}

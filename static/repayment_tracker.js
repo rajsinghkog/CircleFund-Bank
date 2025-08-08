@@ -1,5 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    function getStoredUser(){
+        try {
+            const raw = localStorage.getItem('user');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                if (raw === 'undefined' || raw === 'null') localStorage.removeItem('user');
+                return null;
+            }
+            return JSON.parse(raw);
+        } catch (_) {
+            localStorage.removeItem('user');
+            return null;
+        }
+    }
+    const user = getStoredUser();
     if (!user) {
         window.location.href = '/login';
         return;
@@ -9,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Skeleton
     repaymentListDiv.innerHTML = '<div class="skeleton" style="height:56px; margin-bottom:12px"></div><div class="skeleton" style="height:56px"></div>';
 
-    // Fetch user's loans
+    // Fetch user's loans (legacy-compatible)
     fetch('/api/loan/my?user_id=' + encodeURIComponent(user.id))
         .then(res => res.json())
         .then(loans => {
@@ -49,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/loan/${loanId}/repay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 0, user_id: user.id }) // In a real app, prompt for amount
+                body: JSON.stringify({ amount: 1.0 }) // In a real app, prompt for amount
             })
             .then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)))
             .then(() => {
